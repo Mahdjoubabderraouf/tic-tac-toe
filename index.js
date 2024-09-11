@@ -207,13 +207,22 @@ const Game = (() => {
   return { resetPlayers, play, getLastPlayValue, getNextPlayer };
 })();
 
-const displayController = (() => {
-  const gameboardUI = document.getElementById("gameboard");
-  const main = document.querySelector("main");
-  const dialoge = document.createElement("dialog");
-  const h4 = document.createElement("h4");
+const displayVue = (() => {
+  const createElement = (tag, classList, father) => {
+    const vue = document.createElement(tag);
+    vue.classList.add(...classList); // Spread the class list array
+    father.appendChild(vue);
+    return vue;
+  };
 
-  main.appendChild(h4);
+  const main = document.querySelector("main");
+  const gameboardUI = document.getElementById("gameboard");
+
+  const h4 = createElement("h4", [], main); // Passing an empty array for classList
+
+  const setH4 = (text) => {
+    h4.textContent = text;
+  };
 
   const createCell = (row, col) => {
     const cell = document.createElement("div");
@@ -223,79 +232,92 @@ const displayController = (() => {
     return cell;
   };
 
-  const setH4 = (text) => {
-    h4.textContent = text;
-  };
-
-  const addEventListeners = () => {
-    const cells = document.querySelectorAll(".cell");
-    cells.forEach((cell) => {
-      cell.addEventListener("click", (e) => {
-        const row = parseInt(e.target.getAttribute("data-row"));
-        const col = parseInt(e.target.getAttribute("data-col"));
-        const roundStatus = Game.play(row, col);
-        e.target.textContent = Gameboard.getCellGenral(row, col);
-        if (roundStatus === "winner") {
-          createDialoge({
-            roundStatus,
-            winnerType: Game.getLastPlayValue(),
-          });
-        } else if (roundStatus === "draw") {
-          createDialoge({ roundStatus });
-        } else if (roundStatus === "continue") {
-          setH4(`Next Player: ${Game.getNextPlayer()}`);
-        }
-      });
-    });
+  const setCellText = (cell, text) => {
+    cell.textContent = text;
   };
 
   const createDialoge = ({ roundStatus, winnerType }) => {
-    // create dialoge in the main
-    dialoge.classList.add("dialoge");
-
-    // create a div in the dialoge
-    const dialogContent = document.createElement("div");
-    dialogContent.classList.add("container");
-    dialoge.appendChild(dialogContent);
-
-    // create a h3 in the div
-    const roundStatusDiv = document.createElement("h3");
-    dialogContent.appendChild(roundStatusDiv);
-
-    // create a button in the div
-    const newGameButton = document.createElement("button");
+    const dialoge = createElement("dialog", ["dialoge"], main);
+    const dialogContent = createElement("div", ["container"], dialoge);
+    const roundStatusDiv = createElement("h3", ["round-status"], dialogContent);
+    const newGameButton = createElement("button", ["new-game"], dialogContent);
     newGameButton.textContent = "Start New Game";
-    dialogContent.appendChild(newGameButton);
-    newGameButton.addEventListener("click", reset);
-    // set the text of the h3
-    if (roundStatus === "draw") roundStatusDiv.textContent = "Draw";
-    else roundStatusDiv.textContent = `The winner is ${winnerType}`;
-    main.appendChild(dialoge);
+    newGameButton.addEventListener("click", () => {
+      displayController.reset();
+    });
+    if (roundStatus === "winner") {
+      roundStatusDiv.textContent = `The winner is ${winnerType}`;
+    } else if (roundStatus === "draw") {
+      roundStatusDiv.textContent = "It's a draw";
+    }
   };
 
-  const fillCells = (board) => {
-    board.forEach((row, rowIndex) => {
+  const removeDialoge = () => {
+    const dialoge = document.querySelector(".dialoge");
+    dialoge.remove();
+  };
+
+  const renderGameboard = (gameboardData, nextPlayer) => {
+    gameboardUI.innerHTML = ""; // Clear gameboard before rendering
+    gameboardData.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
-        const cellElement = createCell(rowIndex, colIndex);
-        gameboardUI.appendChild(cellElement);
+        const cellUI = createCell(rowIndex, colIndex);
+        cellUI.classList.add("cell");
+        gameboardUI.appendChild(cellUI);
       });
     });
+    setH4(`First Player: ${nextPlayer}`);
   };
 
-  const renderGameboard = () => {
-    Gameboard.resetGameboard();
-    fillCells(Gameboard.getGameboard());
-    setH4(`First Player : ${Game.getNextPlayer()}`);
-    addEventListeners();
+  const resetGameboard = (nextPlayer) => {
+    displayVue.removeDialoge();
+    const cells = document.querySelectorAll(".cell");
+    cells.forEach((cell) => {
+      cell.textContent = "";
+    });
+    setH4(`First Player: ${nextPlayer}`);
   };
 
-  const reset = () => {
-    dialoge.remove();
-    dialoge.innerHTML = "";
-    gameboardUI.innerHTML = "";
-    renderGameboard();
+  return {
+    setCellText,
+    resetGameboard,
+    removeDialoge,
+    setH4,
+    createDialoge,
+    renderGameboard,
   };
-  return { renderGameboard };
 })();
 
-displayController.renderGameboard();
+const displayController = (() => {
+  const gameboardData = Gameboard.getGameboard();
+
+  displayVue.renderGameboard(gameboardData, Game.getNextPlayer());
+
+  const cells = document.querySelectorAll(".cell");
+  cells.forEach((cell) => {
+    cell.addEventListener("click", (e) => {
+      const row = parseInt(e.target.getAttribute("data-row"));
+      const col = parseInt(e.target.getAttribute("data-col"));
+      const roundStatus = Game.play(row, col);
+
+      displayVue.setCellText(e.target, Gameboard.getCellGenral(row, col));
+      if (roundStatus === "winner") {
+        displayVue.createDialoge({
+          roundStatus,
+          winnerType: Game.getLastPlayValue(),
+        });
+      } else if (roundStatus === "draw") {
+        displayVue.createDialoge({ roundStatus });
+      } else if (roundStatus === "continue") {
+        displayVue.setH4(`Next Player: ${Game.getNextPlayer()}`);
+      }
+    });
+  });
+
+  const reset = () => {
+    Gameboard.resetGameboard();
+    displayVue.resetGameboard(Game.getNextPlayer());
+  };
+
+  return { reset };
+})();
