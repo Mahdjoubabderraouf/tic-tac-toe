@@ -11,8 +11,6 @@ const createPlayer = (cellType) => {
   return { getType };
 };
 
-// const createBotPlayer = () => {};
-
 const createHumanPlayer = (type) => {
   const player = createPlayer(type);
 
@@ -294,11 +292,5 @@ const displayController = (() => {
 
   return { init };
 })();
-
-// Game.play(1, 1);
-// Game.play(2, 0);
-// Game.play(0, 2);
-// Game.play(2, 2);
-// Game.play(0, 0);
 
 displayController.init();
