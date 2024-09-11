@@ -2,8 +2,10 @@
 # Tic-Tac-Toe Project
 
 ## Overview
-
 This project is a simple Tic-Tac-Toe game built to practice and apply knowledge of **factory functions** and **Immediately Invoked Function Expressions (IIFE)** in JavaScript. The code is designed to be modular and maintainable, with a clear separation of game logic and UI functionality.
+
+## Preview
+[https://mahdjoubabderraouf.github.io/tic-tac-toe](Tic-Tac-Toe)
 
 ## Features
 
@@ -20,4 +22,5 @@ This project is a simple Tic-Tac-Toe game built to practice and apply knowledge 
    ```
 2. Open the project in your browser (served via a local server if needed).
 3. Play the game by clicking on the cells!
+
 
