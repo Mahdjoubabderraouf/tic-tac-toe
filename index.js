@@ -15,7 +15,7 @@ const createHumanPlayer = (type) => {
   const player = createPlayer(type);
 
   const nextPlay = (row, col) => {
-    Gameboard.setNewPlay(row, col, type);
+    return Gameboard.setNewPlay(row, col, type);
   };
   return { ...player, nextPlay };
 };
@@ -71,7 +71,11 @@ const Gameboard = (() => {
   };
 
   const setNewPlay = (row, col, value) => {
-    if (gameboard[row][col].setValue(value)) counterMoves++;
+    if (gameboard[row][col].setValue(value)) {
+      counterMoves++;
+      return true;
+    }
+    return false;
   };
 
   const checkDraw = () => {
@@ -192,20 +196,23 @@ const Game = (() => {
   };
 
   const play = (row, col) => {
-    currentPlayer.nextPlay(row, col);
-    const roundStatus = Gameboard.roundStatus(row, col);
-    Gameboard.printGameboard();
-    switchPlayers();
-    return roundStatus;
+    if (currentPlayer.nextPlay(row, col)) {
+      const roundStatus = Gameboard.roundStatus(row, col);
+      Gameboard.printGameboard();
+      switchPlayers();
+      return roundStatus;
+    }
   };
 
   return { resetPlayers, play, getLastPlayValue, getNextPlayer };
 })();
 
 const displayController = (() => {
-  const h4 = document.createElement("h4");
   const gameboardUI = document.getElementById("gameboard");
   const main = document.querySelector("main");
+  const dialoge = document.createElement("dialog");
+  const h4 = document.createElement("h4");
+
   main.appendChild(h4);
 
   const createCell = (row, col) => {
@@ -218,19 +225,6 @@ const displayController = (() => {
 
   const setH4 = (text) => {
     h4.textContent = text;
-  };
-
-  const renderGameboard = () => {
-    Gameboard.resetGameboard();
-    const board = Gameboard.getGameboard();
-    board.forEach((row, rowIndex) => {
-      row.forEach((cell, colIndex) => {
-        const cellElement = createCell(rowIndex, colIndex);
-        gameboardUI.appendChild(cellElement);
-      });
-    });
-    setH4(`First Player : ${Game.getNextPlayer()}`);
-    addEventListeners();
   };
 
   const addEventListeners = () => {
@@ -257,7 +251,6 @@ const displayController = (() => {
 
   const createDialoge = ({ roundStatus, winnerType }) => {
     // create dialoge in the main
-    const dialoge = document.createElement("dialog");
     dialoge.classList.add("dialoge");
 
     // create a div in the dialoge
@@ -273,19 +266,34 @@ const displayController = (() => {
     const newGameButton = document.createElement("button");
     newGameButton.textContent = "Start New Game";
     dialogContent.appendChild(newGameButton);
-
+    newGameButton.addEventListener("click", reset);
     // set the text of the h3
     if (roundStatus === "draw") roundStatusDiv.textContent = "Draw";
     else roundStatusDiv.textContent = `The winner is ${winnerType}`;
     main.appendChild(dialoge);
-    newGameButton.addEventListener("click", resetGameboardUI);
   };
 
-  const resetGameboardUI = () => {
-    main.removeChild(dialoge);
-    document.querySelectorAll(".cell").forEach((cell) => {
-      cell.textContent = "";
+  const fillCells = (board) => {
+    board.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        const cellElement = createCell(rowIndex, colIndex);
+        gameboardUI.appendChild(cellElement);
+      });
     });
+  };
+
+  const renderGameboard = () => {
+    Gameboard.resetGameboard();
+    fillCells(Gameboard.getGameboard());
+    setH4(`First Player : ${Game.getNextPlayer()}`);
+    addEventListeners();
+  };
+
+  const reset = () => {
+    dialoge.remove();
+    dialoge.innerHTML = "";
+    gameboardUI.innerHTML = "";
+    renderGameboard();
   };
   return { renderGameboard };
 })();
