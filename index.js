@@ -135,14 +135,13 @@ const Gameboard = (() => {
 
   const checkWinner = (row, col) => {
     if (counterMoves < 5) return false;
-
     if (!gameboard[row][col].isEmpty()) {
       const valueOfTheMove = gameboard[row][col].getValue();
       if (checkRowNeighbors(row, col, valueOfTheMove)) return true;
       if (checkColNeighbors(row, col, valueOfTheMove)) return true;
       return checkDiagonalNeighbors(row, col, valueOfTheMove);
     }
-    return undefined;
+    throw new Error("The cell is empty");
   };
   // for testing in the console
   const printGameboard = () => {
