@@ -17,13 +17,7 @@ const createHumanPlayer = (type) => {
   const nextPlay = (row, col) => {
     Gameboard.setNewPlay(row, col, type);
   };
-
-  const didWin = (row, col) => {
-    if (Gameboard.checkDraw()) return "draw";
-    return Gameboard.checkWinner(row, col);
-  };
-
-  return { ...player, nextPlay, didWin };
+  return { ...player, nextPlay };
 };
 
 const createCell = () => {
@@ -143,6 +137,13 @@ const Gameboard = (() => {
     }
     throw new Error("The cell is empty");
   };
+
+  const roundStatus = (row, col) => {
+    if (checkDraw()) return "draw";
+    if (checkWinner(row, col)) return "winner";
+    return "continue";
+  };
+
   // for testing in the console
   const printGameboard = () => {
     gameboard.forEach((row) => {
@@ -160,9 +161,8 @@ const Gameboard = (() => {
   return {
     resetGameboard,
     getCellGenral,
-    checkDraw,
     printGameboard,
-    checkWinner,
+    roundStatus,
     getGameboard,
     setNewPlay,
   };
@@ -193,9 +193,7 @@ const Game = (() => {
 
   const play = (row, col) => {
     currentPlayer.nextPlay(row, col);
-    let roundStatus = "continue";
-    if (currentPlayer.didWin(row, col) === true) roundStatus = "winner";
-    if (currentPlayer.didWin(row, col) === "draw") roundStatus = "draw";
+    const roundStatus = Gameboard.roundStatus(row, col);
     Gameboard.printGameboard();
     switchPlayers();
     return roundStatus;
@@ -218,7 +216,12 @@ const displayController = (() => {
     return cell;
   };
 
+  const setH4 = (text) => {
+    h4.textContent = text;
+  };
+
   const renderGameboard = () => {
+    Gameboard.resetGameboard();
     const board = Gameboard.getGameboard();
     board.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
@@ -226,10 +229,8 @@ const displayController = (() => {
         gameboardUI.appendChild(cellElement);
       });
     });
-  };
-
-  const setH4 = (text) => {
-    h4.textContent = text;
+    setH4(`First Player : ${Game.getNextPlayer()}`);
+    addEventListeners();
   };
 
   const addEventListeners = () => {
@@ -258,40 +259,35 @@ const displayController = (() => {
     // create dialoge in the main
     const dialoge = document.createElement("dialog");
     dialoge.classList.add("dialoge");
+
     // create a div in the dialoge
     const dialogContent = document.createElement("div");
     dialogContent.classList.add("container");
     dialoge.appendChild(dialogContent);
+
     // create a h3 in the div
     const roundStatusDiv = document.createElement("h3");
     dialogContent.appendChild(roundStatusDiv);
+
     // create a button in the div
     const newGameButton = document.createElement("button");
     newGameButton.textContent = "Start New Game";
-    newGameButton.addEventListener("click", () => {
-      main.removeChild(dialoge);
-      Gameboard.resetGameboard();
-      setH4(`First Player : ${Game.getNextPlayer()}`);
-      document.querySelectorAll(".cell").forEach((cell) => {
-        cell.textContent = "";
-      });
-    });
     dialogContent.appendChild(newGameButton);
+
     // set the text of the h3
     if (roundStatus === "draw") roundStatusDiv.textContent = "Draw";
     else roundStatusDiv.textContent = `The winner is ${winnerType}`;
-
     main.appendChild(dialoge);
+    newGameButton.addEventListener("click", resetGameboardUI);
   };
 
-  const init = () => {
-    Gameboard.resetGameboard();
-    renderGameboard();
-    addEventListeners();
-    setH4(`First Player : ${Game.getNextPlayer()}`);
+  const resetGameboardUI = () => {
+    main.removeChild(dialoge);
+    document.querySelectorAll(".cell").forEach((cell) => {
+      cell.textContent = "";
+    });
   };
-
-  return { init };
+  return { renderGameboard };
 })();
 
-displayController.init();
+displayController.renderGameboard();
