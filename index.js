@@ -270,8 +270,9 @@ const displayController = (() => {
     const newGameButton = document.createElement("button");
     newGameButton.textContent = "Start New Game";
     newGameButton.addEventListener("click", () => {
-      Gameboard.resetGameboard();
       main.removeChild(dialoge);
+      Gameboard.resetGameboard();
+      setH4(`First Player : ${Game.getNextPlayer()}`);
       document.querySelectorAll(".cell").forEach((cell) => {
         cell.textContent = "";
       });
@@ -285,6 +286,7 @@ const displayController = (() => {
   };
 
   const init = () => {
+    Gameboard.resetGameboard();
     renderGameboard();
     addEventListeners();
     setH4(`First Player : ${Game.getNextPlayer()}`);
