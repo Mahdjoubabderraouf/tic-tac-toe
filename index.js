@@ -78,6 +78,10 @@ const Gameboard = (() => {
     return false;
   };
 
+  const deacreseCounter = () => {
+    counterMoves--;
+  };
+
   const checkDraw = () => {
     return counterMoves === 9;
   };
@@ -153,7 +157,7 @@ const Gameboard = (() => {
     gameboard.forEach((row) => {
       console.log(row.map((cell) => cell.getValue()).join(" | "));
     });
-    console.log();
+    console.log(" ");
   };
 
   const resetGameboard = () => {
@@ -162,23 +166,46 @@ const Gameboard = (() => {
     counterMoves = 0;
   };
 
+  const setGameboard = (newGameboard) => {
+    gameboard = newGameboard.map((row) => row.map((cell) => ({ ...cell })));
+  };
+
+  const copyGameboard = () => {
+    return gameboard.map((row) =>
+      row.map((cell) => {
+        const newCell = createCell();
+        newCell.setValue(cell.getValue());
+        return newCell;
+      })
+    );
+  };
+
   return {
+    setGameboard,
     resetGameboard,
     getCellGenral,
     printGameboard,
     roundStatus,
     getGameboard,
     setNewPlay,
+    copyGameboard,
+    deacreseCounter,
   };
 })();
 
 const Game = (() => {
+  let historyStack = [];
   let currentPlayer = createHumanPlayer(cellType.x);
   let nextPlayer = createHumanPlayer(cellType.o);
 
   const resetPlayers = () => {
     currentPlayer = createHumanPlayer(cellType.x);
     nextPlayer = createHumanPlayer(cellType.o);
+  };
+
+  const setPlayers = (currentPlayer1, nextPlayer1) => {
+    currentPlayer = currentPlayer1;
+    nextPlayer = nextPlayer1;
   };
 
   const getLastPlayValue = () => {
@@ -189,14 +216,30 @@ const Game = (() => {
     return currentPlayer.getType();
   };
 
+  const getLastMove = () => {
+    if (historyStack.length === 0) return false;
+    return historyStack.pop();
+  };
+
   const switchPlayers = () => {
-    const temp = currentPlayer;
-    currentPlayer = nextPlayer;
-    nextPlayer = temp;
+    [currentPlayer, nextPlayer] = [nextPlayer, currentPlayer];
+  };
+
+  const toSaveInHistory = () => {
+    const currentPlayerCopy = createHumanPlayer(currentPlayer.getType());
+    const nextPlayerCopy = createHumanPlayer(nextPlayer.getType());
+    const gameboardCopy = Gameboard.copyGameboard();
+    return {
+      currentPlayerCopy,
+      nextPlayerCopy,
+      gameboardCopy,
+    };
   };
 
   const play = (row, col) => {
+    const previousMove = toSaveInHistory();
     if (currentPlayer.nextPlay(row, col)) {
+      historyStack.push(previousMove);
       const roundStatus = Gameboard.roundStatus(row, col);
       Gameboard.printGameboard();
       switchPlayers();
@@ -204,13 +247,32 @@ const Game = (() => {
     }
   };
 
-  return { resetPlayers, play, getLastPlayValue, getNextPlayer };
+  const backStep = () => {
+    const lastMove = getLastMove();
+    if (lastMove) {
+      Gameboard.setGameboard(lastMove.gameboardCopy);
+      setPlayers(lastMove.currentPlayerCopy, lastMove.nextPlayerCopy);
+      Gameboard.deacreseCounter();
+      return true;
+    }
+    return false;
+  };
+
+  return {
+    backStep,
+    setPlayers,
+    getLastMove,
+    resetPlayers,
+    play,
+    getLastPlayValue,
+    getNextPlayer,
+  };
 })();
 
 const displayVue = (() => {
   const createElement = (tag, classList, father) => {
     const vue = document.createElement(tag);
-    vue.classList.add(...classList); // Spread the class list array
+    vue.classList.add(...classList);
     father.appendChild(vue);
     return vue;
   };
@@ -218,11 +280,25 @@ const displayVue = (() => {
   const main = document.querySelector("main");
   const gameboardUI = document.getElementById("gameboard");
 
-  const h4 = createElement("h4", [], main); // Passing an empty array for classList
-
+  const h4 = createElement("h4", [], main);
   const setH4 = (text) => {
     h4.textContent = text;
   };
+
+  const buttonsContainer = createElement("div", ["buttons-container"], main);
+
+  const newGameBtn = createElement("button", ["white-btn"], buttonsContainer);
+  newGameBtn.textContent = "Start New Game";
+  newGameBtn.addEventListener("click", () => {
+    displayController.reset();
+  });
+
+  const icon = createElement("img", ["white-btn", "svg"], buttonsContainer);
+  icon.src = "./assets/icons8-left-arrow.svg";
+  icon.alt = "back icon";
+  icon.addEventListener("click", () => {
+    displayController.backStep();
+  });
 
   const createCell = (row, col) => {
     const cell = document.createElement("div");
@@ -230,6 +306,12 @@ const displayVue = (() => {
     cell.setAttribute("data-row", row);
     cell.setAttribute("data-col", col);
     return cell;
+  };
+
+  const getCell = (row, column) => {
+    return document.querySelector(
+      `.cell[data-row="${row}"][data-col="${column}"]`
+    );
   };
 
   const setCellText = (cell, text) => {
@@ -241,8 +323,18 @@ const displayVue = (() => {
     const dialogContent = createElement("div", ["container"], dialoge);
     const roundStatusDiv = createElement("h3", ["round-status"], dialogContent);
     const newGameButton = createElement("button", ["new-game"], dialogContent);
+    const closeDialogeButton = createElement(
+      "button",
+      ["close-dialoge"],
+      dialogContent
+    );
+    closeDialogeButton.textContent = "X";
+    closeDialogeButton.addEventListener("click", () => {
+      removeDialoge();
+    });
     newGameButton.textContent = "Start New Game";
     newGameButton.addEventListener("click", () => {
+      removeDialoge();
       displayController.reset();
     });
     if (roundStatus === "winner") {
@@ -270,12 +362,24 @@ const displayVue = (() => {
   };
 
   const resetGameboard = (nextPlayer) => {
-    displayVue.removeDialoge();
     const cells = document.querySelectorAll(".cell");
     cells.forEach((cell) => {
       cell.textContent = "";
     });
     setH4(`First Player: ${nextPlayer}`);
+  };
+
+  const reRenderGameboard = (gameboardData, nextPlayer) => {
+    gameboardUI.innerHTML = "";
+    gameboardData.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        const cellUI = createCell(rowIndex, colIndex);
+        cellUI.classList.add("cell");
+        setCellText(cellUI, cell.getValue());
+        gameboardUI.appendChild(cellUI);
+      });
+    });
+    setH4(`Next Player: ${nextPlayer}`);
   };
 
   return {
@@ -285,6 +389,8 @@ const displayVue = (() => {
     setH4,
     createDialoge,
     renderGameboard,
+    reRenderGameboard,
+    getCell,
   };
 })();
 
@@ -293,31 +399,55 @@ const displayController = (() => {
 
   displayVue.renderGameboard(gameboardData, Game.getNextPlayer());
 
-  const cells = document.querySelectorAll(".cell");
-  cells.forEach((cell) => {
-    cell.addEventListener("click", (e) => {
-      const row = parseInt(e.target.getAttribute("data-row"));
-      const col = parseInt(e.target.getAttribute("data-col"));
-      const roundStatus = Game.play(row, col);
+  const addEventListeners = () => {
+    const cells = document.querySelectorAll(".cell");
+    cells.forEach((cell) => {
+      cell.addEventListener("click", (e) => {
+        const row = parseInt(e.target.getAttribute("data-row"));
+        const col = parseInt(e.target.getAttribute("data-col"));
+        const roundStatus = Game.play(row, col);
 
-      displayVue.setCellText(e.target, Gameboard.getCellGenral(row, col));
-      if (roundStatus === "winner") {
-        displayVue.createDialoge({
-          roundStatus,
-          winnerType: Game.getLastPlayValue(),
-        });
-      } else if (roundStatus === "draw") {
-        displayVue.createDialoge({ roundStatus });
-      } else if (roundStatus === "continue") {
-        displayVue.setH4(`Next Player: ${Game.getNextPlayer()}`);
-      }
+        displayVue.setCellText(e.target, Gameboard.getCellGenral(row, col));
+        if (roundStatus === "winner") {
+          displayVue.createDialoge({
+            roundStatus,
+            winnerType: Game.getLastPlayValue(),
+          });
+        } else if (roundStatus === "draw") {
+          displayVue.createDialoge({ roundStatus });
+        } else if (roundStatus === "continue") {
+          displayVue.setH4(`Next Player: ${Game.getNextPlayer()}`);
+        }
+      });
     });
-  });
+  };
+
+  addEventListeners();
+
+  const fillGameboard = (gameboardData, nextPlayer) => {
+    gameboardData.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        const cellUI = displayVue.getCell(rowIndex, colIndex);
+
+        displayVue.setCellText(cellUI, cell.getValue());
+      });
+    });
+    displayVue.setH4(`Next Player: ${nextPlayer}`);
+  };
+
+  //back step for a move
+  const backStep = () => {
+    if (Game.backStep()) {
+      fillGameboard(Gameboard.getGameboard(), Game.getNextPlayer());
+    } else {
+      alert("You can't go back more");
+    }
+  };
 
   const reset = () => {
     Gameboard.resetGameboard();
     displayVue.resetGameboard(Game.getNextPlayer());
   };
 
-  return { reset };
+  return { reset, backStep };
 })();
