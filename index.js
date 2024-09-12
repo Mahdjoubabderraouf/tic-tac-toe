@@ -463,6 +463,7 @@ const displayController = (() => {
   };
 
   const reset = () => {
+    if (Gameboard.getCounterMoves() === 0) return;
     const previousMove = Game.toSaveInHistory();
     Game.saveInHistory(previousMove);
     Gameboard.resetGameboard();
