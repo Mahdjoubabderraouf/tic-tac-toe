@@ -155,8 +155,8 @@ const Gameboard = (() => {
   };
 
   const roundStatus = (row, col) => {
-    if (checkDraw()) return "draw";
     if (checkWinner(row, col)) return "winner";
+    if (checkDraw()) return "draw";
     return "continue";
   };
 
