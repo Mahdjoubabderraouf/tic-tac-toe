@@ -78,6 +78,14 @@ const Gameboard = (() => {
     return false;
   };
 
+  const getCounterMoves = () => {
+    return counterMoves;
+  };
+
+  const setCounterMoves = (newCounter) => {
+    counterMoves = newCounter;
+  };
+
   const deacreseCounter = () => {
     counterMoves--;
   };
@@ -190,6 +198,8 @@ const Gameboard = (() => {
     setNewPlay,
     copyGameboard,
     deacreseCounter,
+    setCounterMoves,
+    getCounterMoves,
   };
 })();
 
@@ -229,17 +239,23 @@ const Game = (() => {
     const currentPlayerCopy = createHumanPlayer(currentPlayer.getType());
     const nextPlayerCopy = createHumanPlayer(nextPlayer.getType());
     const gameboardCopy = Gameboard.copyGameboard();
+    const counterMoves = Gameboard.getCounterMoves();
     return {
       currentPlayerCopy,
       nextPlayerCopy,
       gameboardCopy,
+      counterMoves,
     };
+  };
+
+  const saveInHistory = (previousMove) => {
+    historyStack.push(previousMove);
   };
 
   const play = (row, col) => {
     const previousMove = toSaveInHistory();
     if (currentPlayer.nextPlay(row, col)) {
-      historyStack.push(previousMove);
+      saveInHistory(previousMove);
       const roundStatus = Gameboard.roundStatus(row, col);
       Gameboard.printGameboard();
       switchPlayers();
@@ -252,7 +268,7 @@ const Game = (() => {
     if (lastMove) {
       Gameboard.setGameboard(lastMove.gameboardCopy);
       setPlayers(lastMove.currentPlayerCopy, lastMove.nextPlayerCopy);
-      Gameboard.deacreseCounter();
+      Gameboard.setCounterMoves(lastMove.counterMoves);
       return true;
     }
     return false;
@@ -266,6 +282,8 @@ const Game = (() => {
     play,
     getLastPlayValue,
     getNextPlayer,
+    saveInHistory,
+    toSaveInHistory,
   };
 })();
 
@@ -445,6 +463,8 @@ const displayController = (() => {
   };
 
   const reset = () => {
+    const previousMove = Game.toSaveInHistory();
+    Game.saveInHistory(previousMove);
     Gameboard.resetGameboard();
     displayVue.resetGameboard(Game.getNextPlayer());
   };
