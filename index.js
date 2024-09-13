@@ -170,7 +170,6 @@ const Gameboard = (() => {
 
   const resetGameboard = () => {
     gameboard = createGameboard(3, 3);
-    Game.resetPlayers();
     counterMoves = 0;
   };
 
@@ -188,7 +187,16 @@ const Gameboard = (() => {
     );
   };
 
+  const isEmpty = () => {
+    gameboard.forEach((row) => {
+      row.forEach((cell) => {
+        if (!cell.isEmpty()) return false;
+      });
+    });
+  };
+
   return {
+    isEmpty,
     setGameboard,
     resetGameboard,
     getCellGenral,
@@ -263,6 +271,12 @@ const Game = (() => {
     }
   };
 
+  const startNewGame = () => {
+    Gameboard.resetGameboard();
+    resetPlayers();
+    historyStack = [];
+  };
+
   const backStep = () => {
     const lastMove = getLastMove();
     if (lastMove) {
@@ -275,6 +289,7 @@ const Game = (() => {
   };
 
   return {
+    startNewGame,
     backStep,
     setPlayers,
     getLastMove,
@@ -424,20 +439,23 @@ const displayController = (() => {
         const row = parseInt(e.target.getAttribute("data-row"));
         const col = parseInt(e.target.getAttribute("data-col"));
         const roundStatus = Game.play(row, col);
-
         displayVue.setCellText(e.target, Gameboard.getCellGenral(row, col));
-        if (roundStatus === "winner") {
-          displayVue.createDialoge({
-            roundStatus,
-            winnerType: Game.getLastPlayValue(),
-          });
-        } else if (roundStatus === "draw") {
-          displayVue.createDialoge({ roundStatus });
-        } else if (roundStatus === "continue") {
-          displayVue.setH4(`Next Player: ${Game.getNextPlayer()}`);
-        }
+        checkGameStatus(roundStatus);
       });
     });
+  };
+
+  const checkGameStatus = (roundStatus) => {
+    if (roundStatus === "winner") {
+      displayVue.createDialoge({
+        roundStatus,
+        winnerType: Game.getLastPlayValue(),
+      });
+    } else if (roundStatus === "draw") {
+      displayVue.createDialoge({ roundStatus });
+    } else if (roundStatus === "continue") {
+      displayVue.setH4(`Next Player: ${Game.getNextPlayer()}`);
+    }
   };
 
   addEventListeners();
@@ -462,13 +480,12 @@ const displayController = (() => {
     }
   };
 
+  // here the reset and save to history
+
   const reset = () => {
     if (Gameboard.getCounterMoves() === 0) return;
-    const previousMove = Game.toSaveInHistory();
-    Game.saveInHistory(previousMove);
-    Gameboard.resetGameboard();
+    Game.startNewGame();
     displayVue.resetGameboard(Game.getNextPlayer());
   };
-
   return { reset, backStep };
 })();
